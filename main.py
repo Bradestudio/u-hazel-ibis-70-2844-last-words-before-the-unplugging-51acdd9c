@@ -50,6 +50,15 @@ def main():
         f.flush()
         os.fsync(f.fileno())
     os.replace(tmp, target)
+    # Fsync the directory too, so the rename itself is durable.
+    try:
+        dir_fd = os.open(out_dir, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    except OSError:
+        pass  # directory fsync is best-effort on some filesystems
     # Read back byte-for-byte and re-validate.
     with open(target, "rb") as f:
         raw = f.read()
